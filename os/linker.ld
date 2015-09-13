@@ -11,28 +11,28 @@ KERNEL_LMA = 0x100000;
 
 SECTIONS
 {
-    /* put early init code here */
-    . = KERNEL_LMA;
-    .multiboot : AT( 0 ) {
-        *(.multiboot);
-    }
+	/* put early init code here */
+	. = KERNEL_LMA;
+	.multiboot : AT( 0 ) {
+		*(.multiboot);
+	}
 
-    .entry ALIGN(4K) : AT( ADDR(.entry) ) {
-        *(.entry);
-        *(.boot_tables);
-        *(.bootstrap_stack);
-    }
+	.entry ALIGN(4K) : AT( ADDR(.entry) ) {
+		*(.entry);
+		*(.boot_tables);
+		*(.bootstrap_stack);
+	}
 
 	/* All other symbols should be linked to the kernel base address, but *placed* from 0x100000. */
 	. += KERNEL_VMA;
 
 	.text ALIGN(4K) : AT(ADDR(.text) - KERNEL_VMA)
 	{
-        kernel_start_phys = (. - KERNEL_VMA);
-        kernel_start = .;
+		kernel_start_phys = (. - KERNEL_VMA);
+		kernel_start = .;
 		*(.text*);
-        *(.rdata*);
-        *(.rodata*);
+		*(.rdata*);
+		*(.rodata*);
 	}
 
 	/* Read-write data (initialized) */
@@ -44,10 +44,10 @@ SECTIONS
 	/* Read-write data (uninitialized) and stack */
 	.bss ALIGN(4K) : AT(ADDR(.bss) - KERNEL_VMA)
 	{
-        _sbss = .;
+		_sbss = .;
 		*(COMMON);
 		*(.bss);
-        _ebss = .;
+		_ebss = .;
 	}
 
 	/* The compiler may produce other sections, by default it will put them in
