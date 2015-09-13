@@ -33,9 +33,25 @@ KernelPT0:
     .set address, address + 0x1000
     .endr
     
-.global BootPT1
-.set address, 0x200103 # same flags as above
-BootPT1:
+.global KernelPT1
+.set address, 0x200103
+KernelPT1:
+    .rept 512
+    .quad address
+    .set address, address + 0x1000
+    .endr
+    
+.global KernelPT2
+.set address, 0x400103
+KernelPT2:
+    .rept 512
+    .quad address
+    .set address, address + 0x1000
+    .endr
+    
+.global KernelPT3
+.set address, 0x600103
+KernelPT2:
     .rept 512
     .quad address
     .set address, address + 0x1000
@@ -54,7 +70,10 @@ BootPD:
 .global KernelPD
 KernelPD:
     .quad (KernelPT0+1)
-    .rept 511
+    .quad (KernelPT1+1)
+    .quad (KernelPT2+1)
+    .quad (KernelPT3+1)
+    .rept 508
     .quad 0
     .endr
     
@@ -135,7 +154,7 @@ BootGDTPtr:
 BootGDTLim:
     .space 2
 BootGDTBse:
-    .space 4
+    .space 8
     
 .align 32
 BootIDT:
@@ -149,7 +168,7 @@ BootIDT:
 .align 32
 BootIDTPtr:
     .word (8*16)-1
-    .long BootIDT
+    .quad BootIDT
     
 .section .entry, "ax"
 .global exception
@@ -233,6 +252,8 @@ start:
 .code64
 _reload_cs:
     # jump to higher-half code
+    mov (%esp), %edi
+    mov 4(%esp), %esi
     movabs $_start_kernel_2, %rax
     jmp *%rax
  
@@ -240,7 +261,4 @@ _reload_cs:
 .global kernel_init
 _start_kernel_2:
     call kernel_init
-    
-    pop %rbx
-    pop %rax
     
