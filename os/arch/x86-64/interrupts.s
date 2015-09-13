@@ -47,14 +47,10 @@ _isr_call_cpp_func:
     # RSP : RDI
     
     mov 120(%rsp), %rax # get func addr
-    mov 136(%rsp), %rbx # get err code (ISR vector no. if no err code)
-    mov 144(%rsp), %rcx # saved RIP
+    mov 136(%rsp), %rdi # get err code (ISR vector no. if no err code)
+    mov 144(%rsp), %rsi # saved RIP
     mov 152(%rsp), %rdx # saved CS
-    pushq %rdx
-    pushq %rcx
-    pushq %rbx
     call *%rax # call cpp handler func
-    add $24, %rsp
     
     pop %rdi
     pop %rsi
@@ -72,7 +68,7 @@ _isr_call_cpp_func:
     pop %r9
     pop %r8
     
-    ret
+    retq
     
 # Before any ISR code runs, our stack looks like:
 # ... program stack ...
@@ -94,11 +90,11 @@ _isr_div_zero:
     
     add $16, %rsp # discard err no. and handler addr.
     popq %rax     # restore rax
-    iret
+    iretq
     
 _isr_debug:
     pushq %rax
-    pushq $0
+    pushq $1
     
     movabs $do_isr_debug, %rax
     pushq %rax # push address of handler
@@ -107,11 +103,11 @@ _isr_debug:
     
     add $16, %rsp
     popq %rax
-    iret
+    iretq
 
-_isr_nmi: # code 3, do_isr_nmi
+_isr_nmi: # code 2, do_isr_nmi
     pushq %rax
-    pushq $3
+    pushq $2
     
     movabs $do_isr_nmi, %rax
     pushq %rax # push address of handler
@@ -120,11 +116,11 @@ _isr_nmi: # code 3, do_isr_nmi
     
     add $16, %rsp
     popq %rax
-    iret
+    iretq
     
-_isr_breakpoint: # code 4, do_isr_breakpoint
+_isr_breakpoint: # code 3, do_isr_breakpoint
     pushq %rax
-    pushq $4
+    pushq $3
     
     movabs $do_isr_breakpoint, %rax
     pushq %rax # push address of handler
@@ -133,11 +129,11 @@ _isr_breakpoint: # code 4, do_isr_breakpoint
     
     add $16, %rsp
     popq %rax
-    iret
+    iretq
     
-_isr_overflow: # code 5, do_isr_overflow
+_isr_overflow: # code 4, do_isr_overflow
     pushq %rax
-    pushq $5
+    pushq $4
     
     movabs $do_isr_overflow, %rax
     pushq %rax # push address of handler
@@ -146,11 +142,11 @@ _isr_overflow: # code 5, do_isr_overflow
     
     add $16, %rsp
     popq %rax
-    iret
+    iretq
     
-_isr_boundrange: # code 6, do_isr_boundrange
+_isr_boundrange: # code 5, do_isr_boundrange
     pushq %rax
-    pushq $6
+    pushq $5
     
     movabs $do_isr_boundrange, %rax
     pushq %rax # push address of handler
@@ -159,11 +155,11 @@ _isr_boundrange: # code 6, do_isr_boundrange
     
     add $16, %rsp
     popq %rax
-    iret
+    iretq
     
-_isr_invalidop: # code 7, do_isr_invalidop
+_isr_invalidop: # code 6, do_isr_invalidop
     pushq %rax
-    pushq $7
+    pushq $6
     
     movabs $do_isr_invalidop, %rax
     pushq %rax # push address of handler
@@ -172,11 +168,11 @@ _isr_invalidop: # code 7, do_isr_invalidop
     
     add $16, %rsp
     popq %rax
-    iret
+    iretq
     
-_isr_devnotavail: # code 8, do_isr_devnotavail
+_isr_devnotavail: # code 7, do_isr_devnotavail
     pushq %rax
-    pushq $8
+    pushq $7
     
     movabs $do_isr_devnotavail, %rax
     pushq %rax # push address of handler
@@ -185,7 +181,7 @@ _isr_devnotavail: # code 8, do_isr_devnotavail
     
     add $16, %rsp
     popq %rax
-    iret
+    iretq
     
 _isr_dfault: # code ??, do_isr_dfault
     pushq %rax
@@ -197,7 +193,7 @@ _isr_dfault: # code ??, do_isr_dfault
     
     add $16, %rsp
     popq %rax
-    iret
+    iretq
     
 _isr_invalidTSS: # code ??, do_isr_invalidTSS
     pushq %rax
@@ -209,7 +205,7 @@ _isr_invalidTSS: # code ??, do_isr_invalidTSS
     
     add $16, %rsp
     popq %rax
-    iret
+    iretq
     
 _isr_segnotpresent: # code ??, do_isr_segnotpresent
     pushq %rax
@@ -221,7 +217,7 @@ _isr_segnotpresent: # code ??, do_isr_segnotpresent
     
     add $16, %rsp
     popq %rax
-    iret
+    iretq
     
 _isr_stackseg: # code ??, do_isr_stackseg
     pushq %rax
@@ -233,7 +229,7 @@ _isr_stackseg: # code ??, do_isr_stackseg
     
     add $16, %rsp
     popq %rax
-    iret
+    iretq
     
 _isr_gpfault: # code ??, do_isr_gpfault
     pushq %rax
@@ -245,7 +241,7 @@ _isr_gpfault: # code ??, do_isr_gpfault
     
     add $16, %rsp
     popq %rax
-    iret
+    iretq
     
 _isr_pagefault: # code ??, do_isr_pagefault
     pushq %rax
@@ -257,7 +253,7 @@ _isr_pagefault: # code ??, do_isr_pagefault
     
     add $16, %rsp
     popq %rax
-    iret
+    iretq
     
 _isr_fpexcept: # code 15, do_isr_fpexcept
     pushq %rax
@@ -270,7 +266,7 @@ _isr_fpexcept: # code 15, do_isr_fpexcept
     
     add $16, %rsp
     popq %rax
-    iret
+    iretq
     
 _isr_align: # code ??, do_isr_align
     pushq %rax
@@ -282,7 +278,7 @@ _isr_align: # code ??, do_isr_align
     
     add $16, %rsp
     popq %rax
-    iret
+    iretq
     
 _isr_machine: # code 17, do_isr_machine
     pushq %rax
@@ -295,7 +291,7 @@ _isr_machine: # code 17, do_isr_machine
     
     add $16, %rsp
     popq %rax
-    iret
+    iretq
     
 _isr_simd_fp: # code 18, do_isr_simd_fp
     pushq %rax
@@ -308,7 +304,7 @@ _isr_simd_fp: # code 18, do_isr_simd_fp
     
     add $16, %rsp
     popq %rax
-    iret
+    iretq
     
 _isr_virt: # code 19, do_isr_virt
     pushq %rax
@@ -321,7 +317,7 @@ _isr_virt: # code 19, do_isr_virt
     
     add $16, %rsp
     popq %rax
-    iret
+    iretq
     
 _isr_security: # code 20, do_isr_security
     pushq %rax
@@ -334,7 +330,7 @@ _isr_security: # code 20, do_isr_security
     
     add $16, %rsp
     popq %rax
-    iret
+    iretq
     
 _isr_reserved: # code 0xFF, do_isr_reserved
     pushq %rax
@@ -347,7 +343,7 @@ _isr_reserved: # code 0xFF, do_isr_reserved
     
     add $16, %rsp
     popq %rax
-    iret
+    iretq
     
 _isr_test: # code 0x8D, do_isr_test
     pushq %rax
@@ -360,7 +356,7 @@ _isr_test: # code 0x8D, do_isr_test
     
     add $16, %rsp
     popq %rax
-    iret
+    iretq
 
 # special treatment for this IRQ
 #_isr_irq_0:
@@ -406,7 +402,7 @@ _isr_irq_0:
     
     add $16, %rsp
     popq %rax
-    iret
+    iretq
     
 _isr_irq_1:
     pushq %rax
@@ -419,7 +415,7 @@ _isr_irq_1:
     
     add $16, %rsp
     popq %rax
-    iret
+    iretq
     
 _isr_irq_2:
     pushq %rax
@@ -432,7 +428,7 @@ _isr_irq_2:
     
     add $16, %rsp
     popq %rax
-    iret
+    iretq
     
 _isr_irq_3:
     pushq %rax
@@ -445,7 +441,7 @@ _isr_irq_3:
     
     add $16, %rsp
     popq %rax
-    iret
+    iretq
     
 _isr_irq_4:
     pushq %rax
@@ -458,7 +454,7 @@ _isr_irq_4:
     
     add $16, %rsp
     popq %rax
-    iret
+    iretq
 
 _isr_irq_5:
     pushq %rax
@@ -471,7 +467,7 @@ _isr_irq_5:
     
     add $16, %rsp
     popq %rax
-    iret
+    iretq
     
 _isr_irq_6:
     pushq %rax
@@ -484,7 +480,7 @@ _isr_irq_6:
     
     add $16, %rsp
     popq %rax
-    iret
+    iretq
     
 _isr_irq_7:
     pushq %rax
@@ -497,7 +493,7 @@ _isr_irq_7:
     
     add $16, %rsp
     popq %rax
-    iret
+    iretq
     
 _isr_irq_8:
     pushq %rax
@@ -510,7 +506,7 @@ _isr_irq_8:
     
     add $16, %rsp
     popq %rax
-    iret
+    iretq
     
 _isr_irq_9:
     pushq %rax
@@ -523,7 +519,7 @@ _isr_irq_9:
     
     add $16, %rsp
     popq %rax
-    iret
+    iretq
     
 _isr_irq_10:
     pushq %rax
@@ -536,7 +532,7 @@ _isr_irq_10:
     
     add $16, %rsp
     popq %rax
-    iret
+    iretq
     
 _isr_irq_11:
     pushq %rax
@@ -549,7 +545,7 @@ _isr_irq_11:
     
     add $16, %rsp
     popq %rax
-    iret
+    iretq
     
 _isr_irq_12:
     pushq %rax
@@ -562,7 +558,7 @@ _isr_irq_12:
     
     add $16, %rsp
     popq %rax
-    iret
+    iretq
     
 _isr_irq_13:
     pushq %rax
@@ -575,7 +571,7 @@ _isr_irq_13:
     
     add $16, %rsp
     popq %rax
-    iret
+    iretq
     
 _isr_irq_14:
     pushq %rax
@@ -588,7 +584,7 @@ _isr_irq_14:
     
     add $16, %rsp
     popq %rax
-    iret
+    iretq
     
 _isr_irq_15:
     pushq %rax
@@ -601,7 +597,7 @@ _isr_irq_15:
     
     add $16, %rsp
     popq %rax
-    iret
+    iretq
 
  _isr_irq_fe:
     pushq %rax
@@ -614,7 +610,7 @@ _isr_irq_15:
     
     add $16, %rsp
     popq %rax
-    iret
+    iretq
     
  _isr_irq_ff:
     pushq %rax
@@ -627,7 +623,7 @@ _isr_irq_15:
     
     add $16, %rsp
     popq %rax
-    iret
+    iretq
 
 _isr_irq_generic:
     pushq %rax
@@ -640,7 +636,7 @@ _isr_irq_generic:
     
     add $16, %rsp
     popq %rax
-    iret
+    iretq
 
 .globl _isr_div_zero
 .globl _isr_debug

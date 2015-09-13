@@ -41,5 +41,7 @@ extern "C" {
     extern void _isr_irq_15(void);
     extern void _isr_irq_fe(void);
     extern void _isr_irq_ff(void);
-    extern void _isr_irq_generic(void);
 }
+
+extern void add_interrupt_entry( unsigned int, void(*)(void) );
+extern void initialize_idt(void);
