@@ -56,17 +56,16 @@ malloc_page* malloc_allocate_descriptor_page()
 	vmem_t new_malloc_page = virtual_memory::allocate(1);
 	malloc_page_header* page_header =
 		reinterpret_cast<malloc_page_header*>(new_malloc_page);
-		
-	malloc_prepare_pghdr(page_header, 0);
-	
-	page_header->page_bitmap[0] |= 0x1F;
-	page_header->page_chunk_size = 0;
-	page_header->n_allocations = 2;
 	
 	malloc_page* new_page_desc = reinterpret_cast<malloc_page*>(
 		get_chunk_address(new_malloc_page, 4, 0));
 	
-	new_page_desc->page_data = new_malloc_page;
+	new_page_desc->page_data = page_header;
+	malloc_prepare_pghdr(new_page_desc, page_header, 0);
+	
+	page_header->page_bitmap[0] |= 0x1F;
+	page_header->page_chunk_size = 0;
+	page_header->n_allocations = 2;
 	
 	return reinterpret_cast<malloc_page*>(
 		get_chunk_address(new_malloc_page, 5, 0) );
@@ -85,7 +84,10 @@ unsigned int malloc_mark_open_slot(
 	return 0;
 }
 
-void malloc_prepare_pghdr(malloc_page_header* page_header)
+void malloc_prepare_pghdr(
+	malloc_page* desc,
+	malloc_page_header* page_header,
+	unsigned int order)
 {
 	if( order == 0 ) {
 		page_header->page_bitmap[0] |= 7; // 0b111
@@ -96,6 +98,7 @@ void malloc_prepare_pghdr(malloc_page_header* page_header)
 	}
 	page_header->page_chunk_size = order;
 	page_header->n_allocations = 0;
+	page_header->page_descriptor = desc;
 }
 
 /* Finds the first open slot and allocates that.
@@ -132,7 +135,8 @@ void* malloc_emerg_alloc(unsigned int order)
 					kmalloc(sizeof(*new_desc), MFLAGS_EMERG);
 				
 				new_desc->page_data = new_page;
-				malloc_prepare_pghdr(new_desc->page_data);
+				malloc_prepare_pghdr(
+					new_desc, new_desc->page_data, 0);
 				
 				new_desc->next = emerg_pages;
 				emerg_pages = new_desc;
@@ -165,12 +169,12 @@ void malloc_init()
 	
 	p0_descriptor->page_data = reinterpret_cast<malloc_page_header*>(
 		&(malloc_init_space[0]));
-	malloc_prepare_pghdr(p0_descriptor->page_data, 0);
+	malloc_prepare_pghdr(p0_descriptor, p0_descriptor->page_data, 0);
 	p0_descriptor->page_data->n_allocations = 2;
 	
 	p1_descriptor->page_data = reinterpret_cast<malloc_page_header*>(
 		&(malloc_init_space[0x1000]));
-	malloc_prepare_pghdr(p1_descriptor->page_data, 0);
+	malloc_prepare_pghdr(p1_descriptor, p1_descriptor->page_data, 0);
 	
 	malloc_pages[0] = p0_descriptor;
 	malloc_pages[1] = p1_descriptor;
@@ -194,11 +198,11 @@ void malloc_init()
 		
 		nd1->page_data = reinterpret_cast<malloc_page_header*>(
 			&(malloc_init_space[i*0x1000]));
-		malloc_prepare_pghdr(nd1->page_data, 0);
+		malloc_prepare_pghdr(nd1, nd1->page_data, 0);
 		
 		nd2->page_data = reinterpret_cast<malloc_page_header*>(
 			&(malloc_init_space[(i+1)*0x1000]));
-		malloc_prepare_pghdr(nd1->page_data, 1);
+		malloc_prepare_pghdr(nd2, nd2->page_data, 1);
 		
 		ord0_head->next = nd1;
 		ord1_head->next = nd2;
@@ -220,7 +224,7 @@ void malloc_init()
 		malloc_page* nd1 = malloc_direct_alloc(cur->page_data);
 		nd1->page_data = reinterpret_cast<malloc_page_header*>(
 			&(malloc_emerg_space[i*0x1000]));
-		malloc_prepare_pghdr(nd1->page_data, 0);
+		malloc_prepare_pghdr(nd1, nd1->page_data, 0);
 		
 		if(emerg_pages == NULL) {
 			emerg_pages = nd1;

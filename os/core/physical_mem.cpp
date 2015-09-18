@@ -7,7 +7,7 @@ struct pmem_block { // buddy alloc block
 	pmem_block* next;
 };
 
-pmem_block* free_lists[ALLOC_MAX_ORDER];
+pmem_block* free_lists[ALLOC_MAX_ORDER+1];
 pmem_block* outstanding_allocations[ALLOC_MAX_ORDER];
 
 unsigned int get_alloc_order( unsigned int n_frames ) {
@@ -276,4 +276,21 @@ bool physical_memory::reserve( pmem_t where, unsigned int n_pages ) {
 	}
 	
 	return true;
+}
+
+/* Initialize the physical memory manager.
+*/
+void physical_memory::initialize(boot_mmap_t* mem_map, unsigned int n_entries)
+{
+	for(unsigned int i=0;i<n_entries;i++) {
+		unsigned int n_blocks = (mem_map[i].size>>12)>>ALLOC_MAX_ORDER;
+		n_blocks++;
+		for(unsigned int j=0;j<n_blocks;j++) {
+			pmem_block* nblock = kmalloc(sizeof(*nblock));
+			nblock->start = mem_map[i].beginning +
+				(j<<(ALLOC_MAX_ORDER+12));
+			nblock->next = free_lists[ALLOC_MAX_ORDER];
+			free_lists[ALLOC_MAX_ORDER] = nblock;
+		}
+	}
 }
