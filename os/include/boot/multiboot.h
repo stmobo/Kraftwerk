@@ -1,6 +1,28 @@
 #pragma once
 #include "interface/types.h"
 
+union multiboot_syms_info {
+	struct aout_syms {
+		uint32_t tabsize;
+		uint32_t strsize;
+		uint32_t addr;
+		uint32_t reserved;
+	} __attribute__((packed)) aout_syms_info;
+	struct elf_syms {
+		uint32_t num;
+		uint32_t size;
+		uint32_t addr;
+		uint32_t shndx;
+	} __attribute__((packed)) elf_syms_info;
+};
+
+struct multiboot_mmap_t {
+	uint32_t size;
+	uint64_t base_addr;
+	uint64_t length;
+	uint32_t type;
+} __attribute__((packed));
+
 struct multiboot_info {
 	uint32_t flags;
 	
@@ -45,26 +67,4 @@ struct multiboot_info {
 	uint16_t vbe_interface_seg;
 	uint16_t vbe_interface_off;
 	uint16_t vbe_interface_len;
-} __attribute__((packed));
-
-union multiboot_syms_info {
-	struct aout_syms {
-		uint32_t tabsize;
-		uint32_t strsize;
-		uint32_t addr;
-		uint32_t reserved;
-	} __attribute__((packed)) aout_syms_info;
-	struct elf_syms {
-		uint32_t num;
-		uint32_t size;
-		uint32_t addr;
-		uint32_t shndx;
-	} __attribute__((packed)) elf_syms_info;
-};
-
-struct multiboot_mmap_t {
-	uint32_t size;
-	uint64_t base_addr;
-	uint64_t length;
-	uint32_t type;
 } __attribute__((packed));

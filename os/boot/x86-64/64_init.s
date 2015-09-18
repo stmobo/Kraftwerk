@@ -24,6 +24,14 @@ PageTable0:
 	.set address, address + 0x1000
 	.endr
 
+.global BootPT1
+.set address, 0x200103
+BootPT1:
+	.rept 512
+	.quad address
+	.set address, address + 0x1000
+	.endr
+	
 .align 0x1000
 .global KernelPT0
 .set address, 0x103 # same flags as above
@@ -51,7 +59,7 @@ KernelPT2:
 	
 .global KernelPT3
 .set address, 0x600103
-KernelPT2:
+KernelPT3:
 	.rept 512
 	.quad address
 	.set address, address + 0x1000

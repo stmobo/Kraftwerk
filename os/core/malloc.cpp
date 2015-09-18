@@ -1,4 +1,5 @@
 #include "interface/malloc.h"
+#include "interface/virtual_mem.h"
 
 /*
  * Allocator design:
@@ -12,17 +13,19 @@
  * of reserved space per page to 48 bytes, or 3 chunks for a 16-byte chunk page.
  */
 
+struct malloc_page_header;
+ 
 struct malloc_page {
-malloc_page_header* page_data;	// 8 bytes
-malloc_page* next;		// 8 bytes
+	malloc_page_header* page_data;	// 8 bytes
+	malloc_page* next;		// 8 bytes
 } __attribute__((packed)); // size: chunk-0
 
 struct malloc_page_header {
-uint64_t     	page_bitmap[4];	 // 8 bytes * 4 = 32 bytes
-uint8_t     	page_chunk_size; // 1 bytes
-malloc_page*	page_descriptor; // 8 bytes
-unsigned short	n_allocations;	 // 2 bytes	
-uint8_t      	reserved[5];     // 48 - 43 = 5 bytes
+	uint64_t     	page_bitmap[4];	 // 8 bytes * 4 = 32 bytes
+	uint8_t     	page_chunk_size; // 1 bytes
+	malloc_page*	page_descriptor; // 8 bytes
+	unsigned short	n_allocations;	 // 2 bytes	
+	uint8_t      	reserved[5];     // 48 - 43 = 5 bytes
 } __attribute__((packed));
 
 malloc_page*	malloc_pages[7];	// (10 - 4) + 1
@@ -35,7 +38,7 @@ vmem_t get_chunk_address(
 {
 	
 	//return page_start + ( chunk_n * (2<<(order+4)) );
-	return page_start + ( chunk_n << (order+4) ) );
+	return page_start + ( chunk_n << (order+4) );
 }
 
 unsigned int get_alloc_order(vmem_t alloc_start)
@@ -47,13 +50,30 @@ unsigned int get_alloc_order(vmem_t alloc_start)
 	return header->page_chunk_size;
 }
 
+void malloc_prepare_pghdr(
+	malloc_page* desc,
+	malloc_page_header* page_header,
+	unsigned int order)
+{
+	if( order == 0 ) {
+		page_header->page_bitmap[0] |= 7; // 0b111
+	} else if (order == 1) {
+		page_header->page_bitmap[0] |= 3; // 0b11
+	} else {
+		page_header->page_bitmap[0] |= 1; // 0b1
+	}
+	page_header->page_chunk_size = order;
+	page_header->n_allocations = 0;
+	page_header->page_descriptor = desc;
+}
+
 /*
 	Allocate a page to hold a new descriptor.
 	Used in malloc_allocate_new_page().
 */
 malloc_page* malloc_allocate_descriptor_page()
 {
-	vmem_t new_malloc_page = virtual_memory::allocate(1);
+	vmem_t new_malloc_page = virtual_memory::allocate_kern(1);
 	malloc_page_header* page_header =
 		reinterpret_cast<malloc_page_header*>(new_malloc_page);
 	
@@ -84,23 +104,6 @@ unsigned int malloc_mark_open_slot(
 	return 0;
 }
 
-void malloc_prepare_pghdr(
-	malloc_page* desc,
-	malloc_page_header* page_header,
-	unsigned int order)
-{
-	if( order == 0 ) {
-		page_header->page_bitmap[0] |= 7; // 0b111
-	} else if (order == 1) {
-		page_header->page_bitmap[0] |= 3; // 0b11
-	} else {
-		page_header->page_bitmap[0] |= 1; // 0b1
-	}
-	page_header->page_chunk_size = order;
-	page_header->n_allocations = 0;
-	page_header->page_descriptor = desc;
-}
-
 /* Finds the first open slot and allocates that.
  * Returns NULL on failure.
  */
@@ -111,7 +114,6 @@ void* malloc_direct_alloc(malloc_page_header* page)
 		return NULL;
 	}
 	page->n_allocations++;
-	vmem_t pg_start = reinterpret_cast<vmem_t>(page);
 	return reinterpret_cast<void*>(page+(slot<<(page->page_chunk_size+4)));
 }
 
@@ -131,10 +133,12 @@ void* malloc_emerg_alloc(unsigned int order)
 				void* ret = malloc_direct_alloc(hdr);
 				vmem_t new_page =
 					virtual_memory::allocate_kern(1);
-				malloc_page* new_desc =
+				malloc_page* new_desc = (malloc_page*)
 					kmalloc(sizeof(*new_desc), MFLAGS_EMERG);
 				
-				new_desc->page_data = new_page;
+				new_desc->page_data =
+					reinterpret_cast<malloc_page_header*>(new_page);
+					
 				malloc_prepare_pghdr(
 					new_desc, new_desc->page_data, 0);
 				
@@ -164,8 +168,8 @@ void malloc_init()
 		
 	p0->page_chunk_size = 0;
 	
-	malloc_page* p0_descriptor = malloc_direct_alloc(p0);
-	malloc_page* p1_descriptor = malloc_direct_alloc(p0);
+	malloc_page* p0_descriptor = (malloc_page*)malloc_direct_alloc(p0);
+	malloc_page* p1_descriptor = (malloc_page*)malloc_direct_alloc(p0);
 	
 	p0_descriptor->page_data = reinterpret_cast<malloc_page_header*>(
 		&(malloc_init_space[0]));
@@ -191,10 +195,10 @@ void malloc_init()
 			cur = cur->next;
 		}
 		malloc_page* nd1 =
-			malloc_direct_alloc(cur->page_data);
+			(malloc_page*)malloc_direct_alloc(cur->page_data);
 		
 		malloc_page* nd2 =
-			malloc_direct_alloc(cur->page_data);
+			(malloc_page*)malloc_direct_alloc(cur->page_data);
 		
 		nd1->page_data = reinterpret_cast<malloc_page_header*>(
 			&(malloc_init_space[i*0x1000]));
@@ -211,7 +215,8 @@ void malloc_init()
 		ord1_head = nd2;
 	}
 	
-	malloc_page* emerg_head;
+	emerg_pages = NULL;
+	malloc_page* emerg_head = NULL;
 	for(unsigned int i=0;i<MALLOC_EMERG_PAGES;i++) {
 		malloc_page* cur = malloc_pages[0];
 		while(cur != NULL) {
@@ -221,7 +226,8 @@ void malloc_init()
 			cur = cur->next;
 		}
 		
-		malloc_page* nd1 = malloc_direct_alloc(cur->page_data);
+		malloc_page* nd1 =
+			(malloc_page*)malloc_direct_alloc(cur->page_data);
 		nd1->page_data = reinterpret_cast<malloc_page_header*>(
 			&(malloc_emerg_space[i*0x1000]));
 		malloc_prepare_pghdr(nd1, nd1->page_data, 0);
@@ -309,8 +315,8 @@ malloc_page* malloc_prepare_new_page( unsigned int order ) {
 
 void* kmalloc( size_t bytes, unsigned int flags ) {
 	if( bytes > 1024 ) { // go to mmap
-		return virtual_memory::allocate_kern(
-			((bytes>>12) > 0) ? (bytes>>12) : 1);
+		return reinterpret_cast<void*>(virtual_memory::allocate_kern(
+			((bytes>>12) > 0) ? (bytes>>12) : 1));
 	} // order must be <= 10
 
 	unsigned int order = 0;
@@ -396,4 +402,34 @@ void kfree( void* allocation ) {
 	}
 	
 	page_header->n_allocations--;
+}
+
+void* operator new(size_t allocsz)
+{
+	return kmalloc(allocsz, 0);
+}
+
+void* operator new[](size_t allocsz)
+{
+	return kmalloc(allocsz, 0);
+}
+
+void operator delete(void* ptr)
+{
+	return kfree(ptr);
+}
+
+void operator delete[](void* ptr)
+{
+	return kfree(ptr);
+}
+
+void operator delete(void* ptr, long unsigned int size)
+{
+	return kfree(ptr);
+}
+
+void operator delete[](void* ptr, long unsigned int size)
+{
+	return kfree(ptr);
 }

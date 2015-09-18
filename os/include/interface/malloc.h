@@ -6,4 +6,4 @@ extern void	kfree(void* allocation);
 extern void	malloc_init();
 #define MALLOC_INIT_PAGES	128
 #define MALLOC_EMERG_PAGES	128
-#define MFLAG_EMERG		1
+#define MFLAGS_EMERG		1

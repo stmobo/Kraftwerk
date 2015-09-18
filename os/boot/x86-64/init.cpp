@@ -40,10 +40,12 @@ void kernel_init(multiboot_info* mb_info, unsigned int magic)
 		cur += (cur_struct->size+4);
 	}
 	
-	boot_mmap_t* mmap = kmalloc(sizeof(*mmap)*n_mem_ranges);
+	physical_memory::boot_mmap_t* mmap =
+		new physical_memory::boot_mmap_t[n_mem_ranges];
+	
 	cur = mb_info->mmap_addr;
 	for(unsigned int i=0;i<n_mem_ranges;i++) {
-		multiboot_mmap_t* cur_struct;
+		multiboot_mmap_t* cur_struct = NULL;
 		
 		while(cur < (mb_info->mmap_addr + mb_info->mmap_length)) {
 			cur_struct = reinterpret_cast<multiboot_mmap_t*>(cur);
@@ -54,8 +56,8 @@ void kernel_init(multiboot_info* mb_info, unsigned int magic)
 			cur += (cur_struct->size+4);
 		}
 		
-		mmap[i].beginning = base_addr;
-		mmap[i].size = length;
+		mmap[i].beginning = cur_struct->base_addr;
+		mmap[i].size = cur_struct->length;
 		cur += (cur_struct->size+4);
 	}
 	

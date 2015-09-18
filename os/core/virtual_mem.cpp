@@ -1,4 +1,6 @@
+#include "interface/types.h"
 #include "interface/virtual_mem.h"
+#include "interface/malloc.h"
 
 virtual_memory::vmem_ll_reg_desc hh_reg; // higher-half region
 
@@ -7,7 +9,7 @@ void virtual_memory::initialize()
 	hh_reg.reg_start = HH_START;	// 1st canonical hh address
 	hh_reg.reg_size  = 0x800000000;	// 128 TiB
 	
-	vmem_ll_node* new_node = kmalloc(sizeof(*new_node));
+	vmem_ll_node* new_node = (vmem_ll_node*)kmalloc(sizeof(*new_node));
 	
 	new_node->alloc_st = hh_reg.reg_start;
 	new_node->size = hh_reg.reg_size;
@@ -26,11 +28,12 @@ void virtual_memory::initialize()
 // The "old" node (prev_node) will have its size set to new_size.
 // The newly-created node will be marked free, have size new_size and end at
 // the old endpoint of prev_node.
-vmem_ll_node* virtual_memory::bisect_node(
-	vmem_ll_node* prev_node,
+virtual_memory::vmem_ll_node* bisect_node(
+	virtual_memory::vmem_ll_node* prev_node,
 	size_t new_size)
 {
-	vmem_ll_node* new_node = kmalloc(sizeof(*new_node));
+	virtual_memory::vmem_ll_node* new_node =
+		(virtual_memory::vmem_ll_node*)kmalloc(sizeof(*new_node));
 	
 	new_node->next = prev_node->next;
 	prev_node->next = new_node;
@@ -62,7 +65,7 @@ vmem_t virtual_memory::allocate_region(
 			return cur->alloc_st;
 		} else if(cur->size > n_pages) {
 			vmem_ll_node* nnode = 
-				virtual_memory::bisect_node(cur, n_pages);
+				bisect_node(cur, n_pages);
 			
 			cur->free = false;
 			return cur->alloc_st;
@@ -117,13 +120,13 @@ bool virtual_memory::reserve_region(
 			// once to get the end
 			if(cur->alloc_st > where) {
 				size_t page_diff = (cur->alloc_st-where)>>12;
-				cur = virtual_memory::bisect_node(
+				cur = bisect_node(
 					cur, page_diff);
 			}
 			
 			if(cur->size > n_pages) {
 				vmem_ll_node* nn = 
-					virtual_memory::bisect_node(
+					bisect_node(
 						cur, n_pages);
 				nn->free = false;
 			} else {

@@ -1,6 +1,7 @@
 #include "arch/x86-64/page_manip.h"
 #include "interface/types.h"
 #include "interface/physical_mem.h"
+#include "interface/malloc.h"
 
 struct pmem_block { // buddy alloc block
 	pmem_t block_start;
@@ -12,11 +13,11 @@ pmem_block* outstanding_allocations[ALLOC_MAX_ORDER];
 
 unsigned int get_alloc_order( unsigned int n_frames ) {
 	unsigned int order = 0;
-	for(unsigned int i=0;i<=BUDDY_MAX_ORDER;i++) {
-		if( (1<<i) == n_frames ) {
+	for(unsigned int i=0;i<=ALLOC_MAX_ORDER;i++) {
+		if( (1u<<i) == n_frames ) {
 			order = i;
 			break;
-		} else if( ( (1<<i) < n_frames) && ((1<<(i+1)) > n_frames)  ) {
+		} else if( ( (1u<<i) < n_frames) && ((1u<<(i+1)) > n_frames)  ) {
 			order = i+1;
 			break;
 		}
@@ -75,8 +76,8 @@ void add_free_list( pmem_block* blk, unsigned int order ) {
 		return;
 	}
 	
-	pmem_blk* cur = free_lists[order];
-	pmem_blk* prev = NULL;
+	pmem_block* cur = free_lists[order];
+	pmem_block* prev = NULL;
 	bool found = false;
 	while( cur != NULL ) {
 		if( (cur->block_start  == (blk->block_start ^ (1<<order))) ) {
@@ -105,7 +106,7 @@ void add_free_list( pmem_block* blk, unsigned int order ) {
 }
 
 // decompose a block of order start_order into blocks of order end_order
-void decompose_block( pmem_blk* block, unsigned int start_order, unsigned int end_order ) {
+void decompose_block( pmem_block* block, unsigned int start_order, unsigned int end_order ) {
 	if( end_order > start_order ) {
 		return;
 	}
@@ -159,17 +160,14 @@ bool physical_memory::is_allocated( pmem_t where, unsigned int n_pages ) {
 	
 	if( cur != NULL ) {
 		while( cur != NULL ) {
-			if( cur->block_start == tmp_blk_start ) {
+			if( cur->block_start == block_start ) {
 				return false;
 			} else {
 				cur = cur->next;
 			}
 		}
 	}
-	
-	bool found_block = false;
-	unsigned int split_order = order;
-	
+		
 	for( unsigned int i = order+1; i < ALLOC_MAX_ORDER; i++) {
 		if( free_lists[i] == NULL ) {
 			continue;
@@ -203,7 +201,7 @@ bool physical_memory::reserve( pmem_t where, unsigned int n_pages ) {
 	
 	if( cur != NULL ) {
 		while( cur != NULL ) {
-			if( cur->block_start == tmp_blk_start ) {
+			if( cur->block_start == block_start ) {
 				found_block = true;
 				break;
 			} else {
@@ -286,8 +284,9 @@ void physical_memory::initialize(boot_mmap_t* mem_map, unsigned int n_entries)
 		unsigned int n_blocks = (mem_map[i].size>>12)>>ALLOC_MAX_ORDER;
 		n_blocks++;
 		for(unsigned int j=0;j<n_blocks;j++) {
-			pmem_block* nblock = kmalloc(sizeof(*nblock));
-			nblock->start = mem_map[i].beginning +
+			pmem_block* nblock =
+				(pmem_block*)kmalloc(sizeof(*nblock));
+			nblock->block_start = mem_map[i].beginning +
 				(j<<(ALLOC_MAX_ORDER+12));
 			nblock->next = free_lists[ALLOC_MAX_ORDER];
 			free_lists[ALLOC_MAX_ORDER] = nblock;
