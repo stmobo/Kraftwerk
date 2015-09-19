@@ -2,6 +2,7 @@
 #include "interface/types.h"
 #include "interface/physical_mem.h"
 #include "interface/malloc.h"
+#include "device/vga.h"
 
 struct pmem_block { // buddy alloc block
 	pmem_t block_start;
@@ -51,7 +52,8 @@ void fill_free_list( unsigned int order ) {
 	pmem_block* old_block = get_block_from_stack(order+1);
 	
 	// split it into two blocks
-	pmem_block* new_block = (pmem_block*)kmalloc(sizeof(pmem_block));
+	pmem_block* new_block = (pmem_block*)kmalloc(
+		sizeof(pmem_block), MFLAGS_EMERG);
 	
 	new_block->block_start = (old_block->block_start) + (1<<(order));
 	new_block->next = old_block;
@@ -117,7 +119,8 @@ void decompose_block( pmem_block* block, unsigned int start_order, unsigned int 
 		return;
 	}
 	
-	pmem_block* new_block = (pmem_block*)kmalloc(sizeof(pmem_block));
+	pmem_block* new_block = (pmem_block*)kmalloc(
+		sizeof(pmem_block), MFLAGS_EMERG);
 	new_block->block_start = align_block( block->block_start, start_order-1 ) ^ (1<<start_order);
 	
 	block->block_start = align_block( block->block_start, start_order-1 );
@@ -145,7 +148,8 @@ pmem_t physical_memory::allocate( unsigned int n_pages ) {
 void physical_memory::free( pmem_t where, unsigned int n_pages ) {
 	unsigned int order = get_alloc_order(n_pages);
 	
-	pmem_block* new_block = (pmem_block*)kmalloc(sizeof(pmem_block));
+	pmem_block* new_block = (pmem_block*)kmalloc(
+		sizeof(pmem_block), MFLAGS_EMERG);
 	new_block->block_start = where;
 	
 	return add_free_list(new_block, order);
@@ -280,16 +284,26 @@ bool physical_memory::reserve( pmem_t where, unsigned int n_pages ) {
 */
 void physical_memory::initialize(boot_mmap_t* mem_map, unsigned int n_entries)
 {
+	terminal_writestring("\npmem: Initializng kernel pmem allocation.");
 	for(unsigned int i=0;i<n_entries;i++) {
-		unsigned int n_blocks = (mem_map[i].size>>12)>>ALLOC_MAX_ORDER;
-		n_blocks++;
+		//unsigned int n_blocks = (mem_map[i].size>>12)>>ALLOC_MAX_ORDER;
+		unsigned int n_frames = (mem_map[i].size>>12);
+		unsigned int order = get_alloc_order(n_frames); // TODO: possibly replace with specialized snippet? (function can't handle inbetween cases )
+		unsigned int n_blocks = n_frames>>order;
+		terminal_writestring("\npmem: Creating block\npmem: order = 0x");
+		terminal_writehex(order);
+		terminal_writestring("\npmem: beginning = 0x");
+		terminal_writehex(mem_map[i].beginning);
+		//n_blocks++;
 		for(unsigned int j=0;j<n_blocks;j++) {
 			pmem_block* nblock =
-				(pmem_block*)kmalloc(sizeof(*nblock));
+				(pmem_block*)kmalloc(
+					sizeof(*nblock), MFLAGS_EMERG);
 			nblock->block_start = mem_map[i].beginning +
-				(j<<(ALLOC_MAX_ORDER+12));
-			nblock->next = free_lists[ALLOC_MAX_ORDER];
-			free_lists[ALLOC_MAX_ORDER] = nblock;
+				(j<<(order+12));
+			nblock->next = free_lists[order];
+			free_lists[order] = nblock;
 		}
 	}
+	terminal_writestring("\npmem: Finished initializng kernel pmem allocation.");
 }

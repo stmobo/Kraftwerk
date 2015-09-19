@@ -1,5 +1,7 @@
 #include "interface/malloc.h"
 #include "interface/virtual_mem.h"
+#include "arch/x86-64/debug.h"
+#include "device/vga.h"
 
 /*
  * Allocator design:
@@ -130,6 +132,7 @@ void* malloc_emerg_alloc(unsigned int order)
 		}
 		if(hdr->page_chunk_size == order) {
 			if(hdr->n_allocations < (4096>>(order+4))) {
+				/*
 				void* ret = malloc_direct_alloc(hdr);
 				vmem_t new_page =
 					virtual_memory::allocate_kern(1);
@@ -144,8 +147,8 @@ void* malloc_emerg_alloc(unsigned int order)
 				
 				new_desc->next = emerg_pages;
 				emerg_pages = new_desc;
-				
-				return ret;
+				*/
+				return malloc_direct_alloc(hdr);
 			}
 		}
 	}
@@ -163,17 +166,26 @@ void* malloc_emerg_alloc(unsigned int order)
  */
 void malloc_init()
 {
+	terminal_writestring("Initializng kernel dynamic allocation.\n");
+	
 	malloc_page_header* p0 =
 		reinterpret_cast<malloc_page_header*>(&(malloc_init_space[0]));
 		
-	p0->page_chunk_size = 0;
+	//p0->page_chunk_size = 0;
+	
+	malloc_prepare_pghdr(NULL, p0, 0);
 	
 	malloc_page* p0_descriptor = (malloc_page*)malloc_direct_alloc(p0);
 	malloc_page* p1_descriptor = (malloc_page*)malloc_direct_alloc(p0);
 	
+	terminal_writestring("Heap initspace starts at 0x");
+	terminal_writehex(reinterpret_cast<uint64_t>(p0));
+	terminal_putchar('\n');
+	
 	p0_descriptor->page_data = reinterpret_cast<malloc_page_header*>(
-		&(malloc_init_space[0]));
-	malloc_prepare_pghdr(p0_descriptor, p0_descriptor->page_data, 0);
+		malloc_init_space);
+	//malloc_prepare_pghdr(p0_descriptor, p0_descriptor->page_data, 0);
+	p0->page_descriptor = p0_descriptor;
 	p0_descriptor->page_data->n_allocations = 2;
 	
 	p1_descriptor->page_data = reinterpret_cast<malloc_page_header*>(
@@ -240,6 +252,8 @@ void malloc_init()
 			emerg_head = nd1;
 		}
 	}
+	
+	terminal_writestring("Kernel dynamic memory initialization complete.\n");
 }
 
 /*
@@ -313,7 +327,17 @@ malloc_page* malloc_prepare_new_page( unsigned int order ) {
 	return page_descriptor;
 }
 
-void* kmalloc( size_t bytes, unsigned int flags ) {
+void* kmalloc( size_t bytes, unsigned int flags )
+{
+	/*
+	terminal_writestring("\nmalloc: attempt allocation, size=0x");
+	terminal_writehex(bytes);
+	terminal_writestring("\nmalloc: flags=0x");
+	terminal_writehex(flags);
+	terminal_writestring("\nmalloc: caller=0x");
+	terminal_writehex(get_return_address());
+	*/
+	
 	if( bytes > 1024 ) { // go to mmap
 		return reinterpret_cast<void*>(virtual_memory::allocate_kern(
 			((bytes>>12) > 0) ? (bytes>>12) : 1));

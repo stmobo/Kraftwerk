@@ -25,7 +25,7 @@ void kernel_init(multiboot_info* mb_info, unsigned int magic)
 	}
 
 	malloc_init();
-
+	
 	// read number of memory map ranges:
 	unsigned int n_mem_ranges = 0;
 	uint32_t cur = mb_info->mmap_addr;
@@ -40,8 +40,8 @@ void kernel_init(multiboot_info* mb_info, unsigned int magic)
 		cur += (cur_struct->size+4);
 	}
 	
-	physical_memory::boot_mmap_t* mmap =
-		new physical_memory::boot_mmap_t[n_mem_ranges];
+	physical_memory::boot_mmap_t* mmap = (physical_memory::boot_mmap_t*)
+		kmalloc(sizeof(*mmap)*n_mem_ranges, MFLAGS_EMERG);
 	
 	cur = mb_info->mmap_addr;
 	for(unsigned int i=0;i<n_mem_ranges;i++) {

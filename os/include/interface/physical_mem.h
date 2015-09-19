@@ -13,7 +13,7 @@ const size_t page_size = 0x1000;
 #define ADDR_TO_PFN(addr) (addr>>12)
 
 const unsigned int block_cache_size = 20;
-#define ALLOC_MAX_ORDER 12
+#define ALLOC_MAX_ORDER 18
 
 pmem_t allocate( unsigned int n_pages );
 bool reserve( pmem_t where, unsigned int n_pages );

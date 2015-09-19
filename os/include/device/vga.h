@@ -59,4 +59,14 @@ void terminal_writestring(string_type data, unsigned int datalen)
 		terminal_putchar(data[i]);
 }
 
+extern const char* alphanumeric;
+template<typename int_type>
+void terminal_writehex(int_type data)
+{
+	unsigned int n_chars = (sizeof(data)*2);
+	for(unsigned int i=0;i<n_chars;i++) {
+		terminal_putchar(alphanumeric[(data>>((n_chars-i)-1)*4)&0xF]);
+	}
+}
+
 extern void terminal_backspace();

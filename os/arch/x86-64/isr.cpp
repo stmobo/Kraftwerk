@@ -7,12 +7,19 @@ void halt_err(uint64_t err, vmem_t rip, uint16_t cs, const char* desc) {
 	//kprintf("%s\nerror code=0x%x\nrip=0x%x\nCS=0x%x", desc, err, rip, cs);
 	//logger_flush_buffer();
     
-    terminal_writestring(desc);
-    
+	terminal_writestring("\nKernel mode trap: ");
+	terminal_writestring(desc);
+	terminal_writestring("\nErrcode=0x");
+	terminal_writehex(err);
+	terminal_writestring("\nRIP=0x");
+	terminal_writehex(rip);
+	terminal_writestring("\nCS=0x");
+	terminal_writehex(cs);
+	
 	while(true) {
-        asm volatile("cli\n\t"
-                     "hlt\n\t" : : : "memory");
-    }
+		asm volatile("cli\n\t"
+				"hlt\n\t" : : : "memory");
+	}
 }
 
 // we're calling stuff from asm, use C linkage with everything
@@ -71,10 +78,12 @@ void do_isr_gpfault(uint64_t err, vmem_t rip, uint16_t cs) {
 }
 
 void do_isr_pagefault(uint64_t err, vmem_t rip, uint16_t cs) {
-    uint64_t cr2;
-    asm volatile("mov %%cr2, %0" : "=g"(cr2) : : "memory");
-    //paging_handle_pagefault(err, cr2, rip, cs);
-    halt_err(err, rip, cs, "Page fault");
+	uint64_t cr2;
+	asm volatile("mov %%cr2, %0" : "=r"(cr2) : : "memory");
+	terminal_writestring("\nCR2=0x");
+	terminal_writehex(cr2);
+	//paging_handle_pagefault(err, cr2, rip, cs);
+	halt_err(err, rip, cs, "Page fault");
 }
     
 void do_isr_fpexcept(uint64_t err, vmem_t rip, uint16_t cs) {

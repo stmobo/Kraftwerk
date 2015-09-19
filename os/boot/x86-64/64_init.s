@@ -25,7 +25,6 @@ PageTable0:
 	.endr
 
 .global BootPT1
-.set address, 0x200103
 BootPT1:
 	.rept 512
 	.quad address
@@ -42,7 +41,6 @@ KernelPT0:
 	.endr
 	
 .global KernelPT1
-.set address, 0x200103
 KernelPT1:
 	.rept 512
 	.quad address
@@ -50,7 +48,6 @@ KernelPT1:
 	.endr
 	
 .global KernelPT2
-.set address, 0x400103
 KernelPT2:
 	.rept 512
 	.quad address
@@ -58,8 +55,42 @@ KernelPT2:
 	.endr
 	
 .global KernelPT3
-.set address, 0x600103
 KernelPT3:
+	.rept 512
+	.quad address
+	.set address, address + 0x1000
+	.endr
+	
+.global KernelPT4
+KernelPT4:
+	.rept 512
+	.quad address
+	.set address, address + 0x1000
+	.endr
+	
+.global KernelPT5
+KernelPT5:
+	.rept 512
+	.quad address
+	.set address, address + 0x1000
+	.endr
+	
+.global KernelPT6
+KernelPT6:
+	.rept 512
+	.quad address
+	.set address, address + 0x1000
+	.endr
+	
+.global KernelPT7
+KernelPT7:
+	.rept 512
+	.quad address
+	.set address, address + 0x1000
+	.endr
+	
+.global KernelPT8
+KernelPT8:
 	.rept 512
 	.quad address
 	.set address, address + 0x1000
@@ -81,6 +112,11 @@ KernelPD:
 	.quad (KernelPT1+1)
 	.quad (KernelPT2+1)
 	.quad (KernelPT3+1)
+	.quad (KernelPT4+1)
+	.quad (KernelPT5+1)
+	.quad (KernelPT6+1)
+	.quad (KernelPT7+1)
+	.quad (KernelPT8+1)
 	.rept 508
 	.quad 0
 	.endr

@@ -1,15 +1,18 @@
 #include "interface/types.h"
 #include "interface/virtual_mem.h"
 #include "interface/malloc.h"
+#include "device/vga.h"
 
 virtual_memory::vmem_ll_reg_desc hh_reg; // higher-half region
 
 void virtual_memory::initialize()
 {
+	terminal_writestring("\nvmem: Initializng kernel vmem allocation.");
 	hh_reg.reg_start = HH_START;	// 1st canonical hh address
 	hh_reg.reg_size  = 0x800000000;	// 128 TiB
 	
-	vmem_ll_node* new_node = (vmem_ll_node*)kmalloc(sizeof(*new_node));
+	vmem_ll_node* new_node = (vmem_ll_node*)kmalloc(
+		sizeof(*new_node), MFLAGS_EMERG);
 	
 	new_node->alloc_st = hh_reg.reg_start;
 	new_node->size = hh_reg.reg_size;
@@ -22,6 +25,8 @@ void virtual_memory::initialize()
 	// of physical memory.
 	// Or, in equivalent terms, the 1st 512*4 pages are reserved.
 	virtual_memory::reserve_region(hh_reg, HH_START, 2048);
+	
+	terminal_writestring("\nvmem: Finished initializng kernel vmem allocation.");
 }
 
 // Split a node into two nodes.
@@ -33,7 +38,8 @@ virtual_memory::vmem_ll_node* bisect_node(
 	size_t new_size)
 {
 	virtual_memory::vmem_ll_node* new_node =
-		(virtual_memory::vmem_ll_node*)kmalloc(sizeof(*new_node));
+		(virtual_memory::vmem_ll_node*)kmalloc(
+			sizeof(*new_node), MFLAGS_EMERG);
 	
 	new_node->next = prev_node->next;
 	prev_node->next = new_node;

@@ -4,9 +4,11 @@ _isr_call_cpp_func:
     #-40:  Return RFLAGS
     #-32:  Return CS
     #-24:  Return RIP
-    #-16:  Saved RAX
-    #-8 :  Exception number / error code
+    #-16:  Exception number / error code
+    #-8 :  Saved RAX
     # RSP: Function address
+    movq $0x0DEADC0DED15EA5E, %rax
+    push %rax
     
     push %r8
     push %r9
@@ -16,7 +18,7 @@ _isr_call_cpp_func:
     push %r13
     push %r14
     push %r15
-    push %rcx
+    push %rcx 
     push %rdx
     push %rbx
     push %rsp
@@ -24,12 +26,13 @@ _isr_call_cpp_func:
     push %rsi
     push %rdi
     
-    # -160: RFLAGS
-    # -152: Return CS
-    # -144: Return Address
-    # -136: ErrCode
-    # -128: RAX
-    # -120: Exception Handler Address
+    # -168: RFLAGS
+    # -160: Return CS
+    # -152: Return Address
+    # -144: ErrCode
+    # -136: RAX
+    # -128: Exception Handler Address
+    # -120: 0x0DEADC0DED15EA5E
     # -112: R8
     # -104: R9
     # -96 : R10
@@ -46,10 +49,10 @@ _isr_call_cpp_func:
     # -8  : RSI
     # RSP : RDI
     
-    mov 120(%rsp), %rax # get func addr
-    mov 136(%rsp), %rdi # get err code (ISR vector no. if no err code)
-    mov 144(%rsp), %rsi # saved RIP
-    mov 152(%rsp), %rdx # saved CS
+    movq 128(%rsp), %rax # get func addr
+    movq 144(%rsp), %rdi # get err code (ISR vector no. if no err code)
+    movq 152(%rsp), %rsi # saved RIP
+    movq 160(%rsp), %rdx # saved CS
     call *%rax # call cpp handler func
     
     pop %rdi
@@ -67,6 +70,8 @@ _isr_call_cpp_func:
     pop %r10
     pop %r9
     pop %r8
+    
+    add $8, %rsp
     
     retq
     
