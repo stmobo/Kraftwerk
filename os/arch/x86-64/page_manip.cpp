@@ -11,25 +11,31 @@ void mem_create_pagetable( vmem_t vaddr ) {
 		// not present, make a new PDPT
 		pmem_t pdpt = physical_memory::allocate(1);
 		MEM_PML4T_ADDR[ MEM_PML4_INDEX(vaddr) ] = (pdpt | 0x101);
+		/*
 		terminal_writestring("\npaging: pdpt at 0x");
 		terminal_writehex(pdpt);
 		terminal_writestring(" mapped");
+		*/
 	}
 	// now it is; check if the PDPT entry is there
 	if( !(MEM_PDPT_ADDR(vaddr)[ MEM_PDPT_INDEX(vaddr) ] & 1) ) {
 		pmem_t pd = physical_memory::allocate(1);
 		MEM_PDPT_ADDR(vaddr)[ MEM_PDPT_INDEX(vaddr) ] = (pd | 0x101);
+		/*
 		terminal_writestring("\npaging: pd at 0x");
 		terminal_writehex(pd);
 		terminal_writestring(" mapped");
+		*/
 	}
 	// check for PD entry:
 	if( !(MEM_PDIR_ADDR(vaddr)[ MEM_PDIR_INDEX(vaddr) ] & 1) ) {
 		pmem_t pt = physical_memory::allocate(1);
 		MEM_PDIR_ADDR(vaddr)[ MEM_PDIR_INDEX(vaddr) ] = (pt | 0x101);
+		/*
 		terminal_writestring("\npaging: pt at 0x");
 		terminal_writehex(pt);
 		terminal_writestring(" mapped");
+		*/
 	}
 }
 
@@ -140,7 +146,23 @@ bool pfaulting = false;
 
 void paging::handle_pagefault(uint64_t errcode, vmem_t fault_addr)
 {
+	if( pfaulting ) {
+		terminal_writestring("\npaging: Page fault at 0x");
+		terminal_writehex(fault_addr);
+		terminal_writestring("\npaging: Faultcode = 0x");
+		terminal_writehex(errcode);
+		terminal_writestring("\npaging: Recursive PF!");
+		while(true) {
+			asm volatile("cli\n\t"
+					"hlt\n\t" : : : "memory");
+		}
+	}
+	
 	if(fault_addr < 0x1000) {
+		terminal_writestring("\npaging: Page fault at 0x");
+		terminal_writehex(fault_addr);
+		terminal_writestring("\npaging: Faultcode = 0x");
+		terminal_writehex(errcode);
 		terminal_writestring("\npaging: Attempted to access NULL page!");
 		while(true) {
 			asm volatile("cli\n\t"
@@ -148,21 +170,12 @@ void paging::handle_pagefault(uint64_t errcode, vmem_t fault_addr)
 		}
 	}
 	
-	terminal_writestring("\npaging: Page fault at 0x");
-	terminal_writehex(fault_addr);
-	terminal_writestring("\npaging: Faultcode = 0x");
-	terminal_writehex(errcode);
-	if( pfaulting ) {
-		terminal_writestring("\npaging: Recursive PF!");
-		while(true) {
-			asm volatile("cli\n\t"
-					"hlt\n\t" : : : "memory");
-		}
-	}
 	pfaulting = true;
 	pmem_t new_page = physical_memory::allocate(1);
+	/*
 	terminal_writestring("\npaging: Allocated paddr 0x");
 	terminal_writehex(new_page);
+	*/
 	if(!mem_check_pagetable(fault_addr)) {
 		mem_create_pagetable(fault_addr);
 	}
@@ -170,4 +183,5 @@ void paging::handle_pagefault(uint64_t errcode, vmem_t fault_addr)
 		(new_page & ~(0xFFF)) | 0x1;
 	refresh_table(fault_addr);
 	pfaulting = false;
+	//terminal_writestring("\npaging: Pagefault resolved.");
 }

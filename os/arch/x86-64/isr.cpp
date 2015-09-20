@@ -86,8 +86,8 @@ void do_isr_pagefault(uint64_t err, vmem_t rip, uint16_t cs) {
 	//paging_handle_pagefault(err, cr2, rip, cs);
 	//halt_err(err, rip, cs, "Page fault");
 	
-	terminal_writestring("\nRIP=0x");
-	terminal_writehex(rip);
+	//terminal_writestring("\nRIP=0x");
+	//terminal_writehex(rip);
 	//terminal_writestring("\nCS=0x");
 	//terminal_writehex(cs);
 	

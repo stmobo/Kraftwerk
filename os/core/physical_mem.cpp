@@ -149,10 +149,12 @@ pmem_t physical_memory::allocate( unsigned int n_pages ) {
 	
 	unsigned int order = get_alloc_order(n_pages);
 	
+	/*
 	terminal_writestring("\npmem: Allocating 0x");
 	terminal_writehex(n_pages);
 	terminal_writestring(" pages, order 0x");
 	terminal_writehex(order);
+	*/
 	
 	fill_free_list(order);
 	

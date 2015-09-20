@@ -78,8 +78,8 @@ void kernel_init(multiboot_info* mb_info, unsigned int magic)
 	test_mem[5] = 'e';
 	test_mem[6] = 'm';
 	test_mem[7] = 'T';
-	test_mem[8] = 's';
-	test_mem[9] = 'e';
+	test_mem[8] = 'e';
+	test_mem[9] = 's';
 	test_mem[10] = 't';
 	test_mem[11] = 'S';
 	test_mem[12] = 't';
@@ -96,8 +96,8 @@ void kernel_init(multiboot_info* mb_info, unsigned int magic)
 	virtual_memory::initialize();
 	
 	// Page-fault test.
-	uint64_t test_address = 0xFFFFFF8FFFFFFFFF;
-	uint32_t* test_pointer = reinterpret_cast<uint32_t*>(test_address);
+	uint64_t test_address = 0xFFFFFF83FFFF0000;
+	uint64_t* test_pointer = reinterpret_cast<uint64_t*>(test_address);
 	
 	*test_pointer = 0x007E5700;
 	
