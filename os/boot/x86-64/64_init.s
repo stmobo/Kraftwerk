@@ -40,57 +40,10 @@ KernelPT0:
 	.set address, address + 0x1000
 	.endr
 	
+.align 0x1000
 .global KernelPT1
+.set address, 0x103 # same flags as above
 KernelPT1:
-	.rept 512
-	.quad address
-	.set address, address + 0x1000
-	.endr
-	
-.global KernelPT2
-KernelPT2:
-	.rept 512
-	.quad address
-	.set address, address + 0x1000
-	.endr
-	
-.global KernelPT3
-KernelPT3:
-	.rept 512
-	.quad address
-	.set address, address + 0x1000
-	.endr
-	
-.global KernelPT4
-KernelPT4:
-	.rept 512
-	.quad address
-	.set address, address + 0x1000
-	.endr
-	
-.global KernelPT5
-KernelPT5:
-	.rept 512
-	.quad address
-	.set address, address + 0x1000
-	.endr
-	
-.global KernelPT6
-KernelPT6:
-	.rept 512
-	.quad address
-	.set address, address + 0x1000
-	.endr
-	
-.global KernelPT7
-KernelPT7:
-	.rept 512
-	.quad address
-	.set address, address + 0x1000
-	.endr
-	
-.global KernelPT8
-KernelPT8:
 	.rept 512
 	.quad address
 	.set address, address + 0x1000
@@ -110,14 +63,7 @@ BootPD:
 KernelPD:
 	.quad (KernelPT0+1)
 	.quad (KernelPT1+1)
-	.quad (KernelPT2+1)
-	.quad (KernelPT3+1)
-	.quad (KernelPT4+1)
-	.quad (KernelPT5+1)
-	.quad (KernelPT6+1)
-	.quad (KernelPT7+1)
-	.quad (KernelPT8+1)
-	.rept 508
+	.rept 510
 	.quad 0
 	.endr
 	

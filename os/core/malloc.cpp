@@ -93,12 +93,13 @@ malloc_page* malloc_allocate_descriptor_page()
 		get_chunk_address(new_malloc_page, 5, 0) );
 }
 
-unsigned int malloc_mark_open_slot(
-	malloc_page_header* page, unsigned int order)
+unsigned int malloc_mark_open_slot(malloc_page_header* page)
 {
+	unsigned int order = page->page_chunk_size;
 	unsigned int n_slots = (4096>>(order+4));
 	for(unsigned int i=0;i<n_slots;i++) {
-		if( !(page->page_bitmap[i>>6] & ( 1<<(i&63) )) ) {
+		// !(page->page_bitmap[i/64] & (1<<(i%64)))
+		if( (page->page_bitmap[i>>6] & ( 1<<(i&63) )) == 0 ) {
 			page->page_bitmap[i>>6] |= (1<<(i&63));
 			return i;
 		}
@@ -111,7 +112,7 @@ unsigned int malloc_mark_open_slot(
  */
 void* malloc_direct_alloc(malloc_page_header* page)
 {
-	unsigned int slot = malloc_mark_open_slot(page, page->page_chunk_size);
+	unsigned int slot = malloc_mark_open_slot(page);
 	if(!slot) {
 		return NULL;
 	}
@@ -151,6 +152,7 @@ void* malloc_emerg_alloc(unsigned int order)
 				return malloc_direct_alloc(hdr);
 			}
 		}
+		cur = cur->next;
 	}
 	
 	return NULL;
@@ -192,16 +194,17 @@ void malloc_init()
 		&(malloc_init_space[0x1000]));
 	malloc_prepare_pghdr(p1_descriptor, p1_descriptor->page_data, 0);
 	
-	malloc_pages[0] = p0_descriptor;
-	malloc_pages[1] = p1_descriptor;
+	malloc_page* ord0_head = p0_descriptor;
+	malloc_page* ord1_head = p1_descriptor;
 	
-	malloc_page* ord0_head = malloc_pages[0];
-	malloc_page* ord1_head = malloc_pages[1];
+	//terminal_writestring("\nmalloc: initial p1 descriptor at 0x");
+	//terminal_writehex(reinterpret_cast<uintptr_t>(p1_descriptor));
 	
 	for(unsigned int i=2;i<MALLOC_INIT_PAGES;i+=2) {
+		/*
 		malloc_page* cur = malloc_pages[0];
 		while(cur != NULL) {
-			if(cur->page_data->n_allocations<254) {
+			if(cur->page_data->n_allocations<252) {
 				break;
 			}
 			cur = cur->next;
@@ -211,6 +214,21 @@ void malloc_init()
 		
 		malloc_page* nd2 =
 			(malloc_page*)malloc_direct_alloc(cur->page_data);
+		*/
+		
+		malloc_page* nd1 =
+			(malloc_page*)malloc_direct_alloc(
+				p0_descriptor->page_data);
+			
+		malloc_page* nd2 =
+			(malloc_page*)malloc_direct_alloc(
+				p0_descriptor->page_data);
+		
+		//terminal_writestring("\nmalloc: new o0 page descriptor at 0x");
+		//terminal_writehex(reinterpret_cast<uintptr_t>(nd1));
+		
+		//terminal_writestring("\nmalloc: new o1 page descriptor at 0x");
+		//terminal_writehex(reinterpret_cast<uintptr_t>(nd1));
 		
 		nd1->page_data = reinterpret_cast<malloc_page_header*>(
 			&(malloc_init_space[i*0x1000]));
@@ -220,12 +238,15 @@ void malloc_init()
 			&(malloc_init_space[(i+1)*0x1000]));
 		malloc_prepare_pghdr(nd2, nd2->page_data, 1);
 		
-		ord0_head->next = nd1;
-		ord1_head->next = nd2;
+		nd1->next = ord0_head;
+		nd2->next = ord1_head;
 		
 		ord0_head = nd1;
 		ord1_head = nd2;
 	}
+	
+	malloc_pages[0] = ord0_head;
+	malloc_pages[1] = ord1_head;
 	
 	emerg_pages = NULL;
 	malloc_page* emerg_head = NULL;
@@ -244,14 +265,15 @@ void malloc_init()
 			&(malloc_emerg_space[i*0x1000]));
 		malloc_prepare_pghdr(nd1, nd1->page_data, 0);
 		
-		if(emerg_pages == NULL) {
-			emerg_pages = nd1;
-			emerg_head = nd1;
-		} else {
-			emerg_head->next = nd1;
-			emerg_head = nd1;
-		}
+		/*
+		terminal_writestring("\nmalloc: new o0 page descriptor at 0x");
+		terminal_writehex(reinterpret_cast<uintptr_t>(nd1));
+		*/
+		
+		nd1->next = emerg_head;
+		emerg_head = nd1;
 	}
+	emerg_head = emerg_pages;
 	
 	terminal_writestring("Kernel dynamic memory initialization complete.\n");
 }
@@ -268,7 +290,7 @@ malloc_page* malloc_allocate_descriptor()
 	
 	while( cur != NULL ) {
 		// ignore full pages
-		if( cur->page_data->n_allocations >= 255 ) {
+		if( cur->page_data->n_allocations >= 252 ) {
 			continue;
 		}
 		
@@ -284,7 +306,7 @@ malloc_page* malloc_allocate_descriptor()
 		return malloc_allocate_descriptor_page();
 	} else {
 		malloc_page_header* page = max_page->page_data;
-		unsigned int slot = malloc_mark_open_slot( page, 0 );
+		unsigned int slot = malloc_mark_open_slot(page);
 		max_page->page_data->n_allocations++;
 		
 		return reinterpret_cast<malloc_page*>(
@@ -354,53 +376,59 @@ void* kmalloc( size_t bytes, unsigned int flags )
 	}
 	order -= 4; // order 0 = 2^4 (16) bytes, order 1 = 2^5 (32) bytes, etc...
 	
-	// Place new allocations in the most used page so far, ignoring full pages.
-	// This tends to "clump" together allocations and makes garbage collection
-	// of unused pages easier.
-
-	// possibly keep the page descriptors in a heap structure to
-	// make this faster than iterating over every page for a given order?
-	unsigned int max_alloc = 0;
-	malloc_page* max_page = NULL;
+	// allocate first nonempty page we can 
+	malloc_page* chosen_page = NULL;
 	
 	if( malloc_pages[order] == NULL ) {
 		if(flags & MFLAGS_EMERG) {
 			return malloc_emerg_alloc(order);
 		} else {
-			max_page = malloc_prepare_new_page(order);
+			chosen_page = malloc_prepare_new_page(order);
 		}
 	} else {
 		malloc_page* cur = malloc_pages[order];
 		while( cur != NULL ) {
 			// ignore full pages
-			if( cur->page_data->n_allocations >= (( 4096 >> (order+4) )-1) ) {
-				continue;
-			}
+			/*
+			terminal_writestring("\nmalloc: malloc_pages[order] = 0x");
+			terminal_writehex(reinterpret_cast<uintptr_t>(&malloc_pages[order]));
+			*/
+			//terminal_writestring("\nmalloc: cur = 0x");
+			//terminal_writehex(reinterpret_cast<uintptr_t>(cur));
+			/*
+			terminal_writestring("\nmalloc: cur->page_data = 0x");
+			terminal_writehex(reinterpret_cast<uintptr_t>(cur->page_data));
+			terminal_writestring("\nmalloc: order = 0x");
+			terminal_writehex(order);
+			terminal_writestring("\nmalloc: n_allocations = 0x");
+			terminal_writehex(cur->page_data->n_allocations);
+			*/
 			
-			if( cur->page_data->n_allocations > max_alloc ) {
-				max_alloc = cur->page_data->n_allocations;
-				max_page = cur;
+			if(cur->page_data->n_allocations <
+			(( 4096 >> (order+4) )-1)) {
+				chosen_page = cur;
+				break;
 			}
 			
 			cur = cur->next;
 		}
 
-		if( max_page == NULL ) { // all pages are full
+		if( chosen_page == NULL ) { // all pages are full
 			if(flags & MFLAGS_EMERG) {
 				return malloc_emerg_alloc(order);
 			} else {
-				max_page = malloc_prepare_new_page(order);
+				chosen_page = malloc_prepare_new_page(order);
 			}
 		}
 	}
 	
-	max_page->page_data->n_allocations++;
+	chosen_page->page_data->n_allocations++;
 	
-	unsigned int slot = malloc_mark_open_slot(max_page->page_data, order);
+	unsigned int slot = malloc_mark_open_slot(chosen_page->page_data);
 	
 	return reinterpret_cast<void*>(
 		get_chunk_address(
-			reinterpret_cast<uintptr_t>(max_page->page_data), slot, order )
+			reinterpret_cast<uintptr_t>(chosen_page->page_data), slot, order )
 	);
 }
 

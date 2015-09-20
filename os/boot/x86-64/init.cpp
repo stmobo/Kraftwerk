@@ -33,8 +33,10 @@ void kernel_init(multiboot_info* mb_info, unsigned int magic)
 	while(cur < (mb_info->mmap_addr + mb_info->mmap_length)) {
 		multiboot_mmap_t* cur_struct =
 			reinterpret_cast<multiboot_mmap_t*>(cur);
-			
-		if(cur_struct->type == 1)
+		
+		// silently drop pages in the 1st MiB
+		if((cur_struct->type == 1) &&
+		(cur_struct->base_addr >= 0x100000))
 			n_mem_ranges++;
 		
 		cur += (cur_struct->size+4);
@@ -50,20 +52,62 @@ void kernel_init(multiboot_info* mb_info, unsigned int magic)
 		while(cur < (mb_info->mmap_addr + mb_info->mmap_length)) {
 			cur_struct = reinterpret_cast<multiboot_mmap_t*>(cur);
 				
-			if(cur_struct->type == 1)
+			if((cur_struct->type == 1) &&
+			(cur_struct->base_addr >= 0x100000))
 				break;
 			
 			cur += (cur_struct->size+4);
 		}
+		
+		terminal_writestring("\ninit: usable memory at 0x");
+		terminal_writehex(cur_struct->base_addr);
+		terminal_writestring("\ninit: length = 0x");
+		terminal_writehex(cur_struct->length);
 		
 		mmap[i].beginning = cur_struct->base_addr;
 		mmap[i].size = cur_struct->length;
 		cur += (cur_struct->size+4);
 	}
 	
+	char* test_mem = (char*)kmalloc(16, 0);
+	test_mem[0] = '\n';
+	test_mem[1] = 'D';
+	test_mem[2] = 'y';
+	test_mem[3] = 'n';
+	test_mem[4] = 'm';
+	test_mem[5] = 'e';
+	test_mem[6] = 'm';
+	test_mem[7] = 'T';
+	test_mem[8] = 's';
+	test_mem[9] = 'e';
+	test_mem[10] = 't';
+	test_mem[11] = 'S';
+	test_mem[12] = 't';
+	test_mem[13] = 'r';
+	test_mem[14] = '!';
+	test_mem[15] = '\0';
+	
+	terminal_writestring(test_mem);
+	
+	//asm("cli;hlt");
+	
 	// initialize the rest of the mm's:
 	physical_memory::initialize(mmap, n_mem_ranges);
 	virtual_memory::initialize();
+	
+	// Page-fault test.
+	uint64_t test_address = 0xFFFFFF8FFFFFFFFF;
+	uint32_t* test_pointer = reinterpret_cast<uint32_t*>(test_address);
+	
+	*test_pointer = 0x007E5700;
+	
+	terminal_writestring("\ninit: write complete.");
+	
+	if( *test_pointer != 0x007E5700) {
+		terminal_writestring("\ninit: PF test failed.");
+	} else {
+		terminal_writestring("\ninit: PF test passed.");
+	}
 
 	asm("cli;hlt");
 	while(true) { asm("pause"); }

@@ -21,10 +21,10 @@ void virtual_memory::initialize()
 	
 	hh_reg.list = new_node;
 	
-	// 1st 4 PTs of higher-half addresses are mapped to the 1st 8 MiB
+	// 1st PT of higher-half addresses are mapped to the 1st 2 MiB
 	// of physical memory.
-	// Or, in equivalent terms, the 1st 512*4 pages are reserved.
-	virtual_memory::reserve_region(hh_reg, HH_START, 2048);
+	// Or, in equivalent terms, the 1st 512 pages are reserved.
+	virtual_memory::reserve_region(hh_reg, HH_START, 512);
 	
 	terminal_writestring("\nvmem: Finished initializng kernel vmem allocation.");
 }

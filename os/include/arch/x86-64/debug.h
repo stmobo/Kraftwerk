@@ -4,6 +4,6 @@
 inline uintptr_t get_return_address()
 {
 	uintptr_t ret;
-	asm("movq -8(%%ebp), %0" : "=r"(ret));
+	asm volatile("movq 8(%%rbp), %0" : "=r"(ret) : : "memory");
 	return ret;
 }

@@ -1,6 +1,7 @@
 #include "interface/types.h"
 #include "arch/x86-64/isr.h"
 #include "device/vga.h"
+#include "interface/paging.h"
 
 void halt_err(uint64_t err, vmem_t rip, uint16_t cs, const char* desc) {
     //panic("Kernel mode trap: %s -- error code=%#x", err, desc);
@@ -80,10 +81,17 @@ void do_isr_gpfault(uint64_t err, vmem_t rip, uint16_t cs) {
 void do_isr_pagefault(uint64_t err, vmem_t rip, uint16_t cs) {
 	uint64_t cr2;
 	asm volatile("mov %%cr2, %0" : "=r"(cr2) : : "memory");
-	terminal_writestring("\nCR2=0x");
-	terminal_writehex(cr2);
+	//terminal_writestring("\nCR2=0x");
+	//terminal_writehex(cr2);
 	//paging_handle_pagefault(err, cr2, rip, cs);
-	halt_err(err, rip, cs, "Page fault");
+	//halt_err(err, rip, cs, "Page fault");
+	
+	terminal_writestring("\nRIP=0x");
+	terminal_writehex(rip);
+	//terminal_writestring("\nCS=0x");
+	//terminal_writehex(cs);
+	
+	return paging::handle_pagefault(err, cr2);
 }
     
 void do_isr_fpexcept(uint64_t err, vmem_t rip, uint16_t cs) {
