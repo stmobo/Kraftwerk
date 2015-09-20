@@ -131,26 +131,45 @@ void* malloc_emerg_alloc(unsigned int order)
 		if(hdr->n_allocations == 0) {
 			hdr->page_chunk_size = order;
 		}
-		if(hdr->page_chunk_size == order) {
-			if(hdr->n_allocations < (4096>>(order+4))) {
-				/*
-				void* ret = malloc_direct_alloc(hdr);
+		if((hdr->page_chunk_size == order) &&
+			hdr->n_allocations < (4096>>(order+4))) {
+			/*
+			void* ret = malloc_direct_alloc(hdr);
+			vmem_t new_page =
+				virtual_memory::allocate_kern(1);
+			malloc_page* new_desc = (malloc_page*)
+				kmalloc(sizeof(*new_desc), MFLAGS_EMERG);
+			
+			new_desc->page_data =
+				reinterpret_cast<malloc_page_header*>(new_page);
+				
+			malloc_prepare_pghdr(
+				new_desc, new_desc->page_data, 0);
+			
+			new_desc->next = emerg_pages;
+			emerg_pages = new_desc;
+			*/
+			
+			// if the next allocation in this block is the midway
+			// point of the available space in this block...
+			if((hdr->n_allocations+1) == (4096>>(order+5))) {
+				// ...then allocate a new page.
 				vmem_t new_page =
-					virtual_memory::allocate_kern(1);
+				virtual_memory::allocate_kern(1);
+				
 				malloc_page* new_desc = (malloc_page*)
-					kmalloc(sizeof(*new_desc), MFLAGS_EMERG);
+				kmalloc(sizeof(*new_desc), MFLAGS_EMERG);
 				
 				new_desc->page_data =
-					reinterpret_cast<malloc_page_header*>(new_page);
+				reinterpret_cast<malloc_page_header*>(new_page);
 					
 				malloc_prepare_pghdr(
 					new_desc, new_desc->page_data, 0);
 				
 				new_desc->next = emerg_pages;
 				emerg_pages = new_desc;
-				*/
-				return malloc_direct_alloc(hdr);
 			}
+			return malloc_direct_alloc(hdr);
 		}
 		cur = cur->next;
 	}
