@@ -3,6 +3,7 @@
 #include "interface/malloc.h"
 #include "interface/physical_mem.h"
 #include "interface/virtual_mem.h"
+#include "interface/print.h"
 #include "arch/x86-64/isr.h"
 #include "device/vga.h"
 
@@ -108,6 +109,9 @@ void kernel_init(multiboot_info* mb_info, unsigned int magic)
 	} else {
 		terminal_writestring("\ninit: PF test passed.");
 	}
+	
+	kprintf("%s\n%#x\n%#p", "Testing basic kprintf functionality.",
+		0xDEADBEEF, test_pointer);
 
 	asm("cli;hlt");
 	while(true) { asm("pause"); }

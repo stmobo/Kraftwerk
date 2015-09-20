@@ -9,8 +9,6 @@ unsigned int terminal_row;
 unsigned int terminal_column;
 uint8_t terminal_color;
 uint16_t* terminal_buffer;
-
-const char* alphanumeric = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ";
  
 char make_color(enum vga_color fg, enum vga_color bg)
 {
