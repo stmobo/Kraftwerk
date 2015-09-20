@@ -73,14 +73,12 @@ char* itoa( int_type num, int base, bool add_space, bool add_plus, bool add_pref
 
 char* dtoa( double num, int precision=6, int base=10, bool add_space=false, bool add_plus=false );
 char* dtosn( double num, int precision=18, int base=10, bool add_space=false, bool add_plus=false );
-int   kvsnprintf(char*, size_t, const char*, va_list);
-int   kvsprintf(char*, const char*, va_list);
-int   kvprintf(const char*, va_list);
-int   ksnprintf(char*, size_t, const char*, ...);
-int   ksprintf(char*, const char*, ...);
-int   kprintf(const char*, ...);
-int   irqsafe_kvprintf(const char*, va_list);
-int   irqsafe_kprintf(const char*, ...);
+int   kvsnprintf(char* out, size_t bufsz, const char* fmt, va_list args);
+int   kvsprintf(char* out, const char* fmt, va_list args);
+int   kvprintf(const char* fmt, va_list args);
+int   ksnprintf(char* out, size_t bufsz, const char* fmt, ...);
+int   ksprintf(char* out, const char* fmt, ...);
+int   kprintf(const char* fmt, ...);
 void  panic(char*, ...);
 
 #define      __kassert_stringifier_2(x) #x

@@ -705,7 +705,9 @@ int kvsnprintf( char* out, size_t bufsz, const char* fmt, va_list args ) {
                     kfree(final);
                     break;
                 } // end case 'u' / 'o' / 'x' / 'X'
-                /*
+                // Following cases disabled because apparently we can't pass
+		// doubles to a function or something (SSE required?)
+		/*
 		case 'f':
                 case 'F':
                 {   

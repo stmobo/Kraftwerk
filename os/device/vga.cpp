@@ -44,6 +44,11 @@ void terminal_setcolor(char color)
 	terminal_color = color;
 }
 
+void terminal_setcolor(enum vga_color fg, enum vga_color bg)
+{
+	terminal_color = make_color(fg, bg);
+}
+
 // terminal_scroll - scroll the console
 // Positive values scroll down (adding new lines to the bottom); negative values do the inverse.
 void terminal_scroll(int num_rows)

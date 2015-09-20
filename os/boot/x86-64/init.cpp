@@ -110,7 +110,7 @@ void kernel_init(multiboot_info* mb_info, unsigned int magic)
 		terminal_writestring("\ninit: PF test passed.");
 	}
 	
-	kprintf("%s\n%#x\n%#p", "Testing basic kprintf functionality.",
+	kprintf("\n%s\n%#x\n%#p\n", "Testing basic kprintf functionality.",
 		0xDEADBEEF, test_pointer);
 
 	asm("cli;hlt");
