@@ -1,3 +1,5 @@
+#pragma once
+
 namespace standalone_std {
 
     template<typename T> struct remove_reference      { typedef T type; };
@@ -17,6 +19,10 @@ namespace standalone_std {
     template<typename T> struct remove_volatile<T> { typedef T type; };
     template<typename T> struct remove_volatile<volatile T> { typedef T type; };
     template<typename T> struct remove_cv { typedef typename remove_volatile<remove_const<T>::type>::type type };
+    
+    template<typename T> struct add_const<T> { typedef const T type; }
+    template<typename T> struct add_volatile<T> { typedef volatile T type; }
+    template<typename T> struct add_cv<T> { typedef typename add_volatile<add_const<T>::type>::type type; }
     
     template<typename T>
     typename remove_reference<T>::type&&

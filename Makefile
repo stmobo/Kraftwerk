@@ -6,6 +6,7 @@ ARCH := x86-64
 MAIN_SRC	:= ./os
 MAIN_OBJ    := ./obj
 INCLUDE_DIR := $(MAIN_SRC)/include
+AUX_INCLUDE_DIR := ./auxlib
 
 ISO_DIR     := ./isodir
 
@@ -43,7 +44,7 @@ AS       := $(HOME)/opt/x64-cross/bin/x86_64-elf-as
 CC       := $(HOME)/opt/x64-cross/bin/x86_64-elf-gcc
 CCFLAGS  := -I$(INCLUDE_DIR) -MMD -MP -std=gnu99 -ffreestanding -g -O2 -Wall -Wextra -mcmodel=large -Wno-unused-parameter -fno-omit-frame-pointer -fno-strict-aliasing
 CXX      := $(HOME)/opt/x64-cross/bin/x86_64-elf-g++
-CXXFLAGS := -MMD -MP -I$(INCLUDE_DIR) -D__$(ARCH)__ -ffreestanding -g -O2 -Wall -Wextra -mcmodel=large -mno-red-zone -mno-mmx -mno-sse -mno-sse2 -fno-exceptions -fno-rtti -fno-omit-frame-pointer -std=c++14
+CXXFLAGS := -MMD -MP -I$(INCLUDE_DIR) -I$(AUX_INCLUDE_DIR) -D__$(ARCH)__ -ffreestanding -g -O2 -Wall -Wextra -mcmodel=large -mno-red-zone -mno-mmx -mno-sse -mno-sse2 -fno-exceptions -fno-rtti -fno-omit-frame-pointer -std=c++14
 LD       := $(HOME)/opt/x64-cross/bin/x86_64-elf-gcc
 LDFLAGS  := -z max-page-size=0x1000 -nostdlib -ffreestanding -g -O2 -L./lib/x86_64-elf/lib
 LDLIBS   := -lgcc

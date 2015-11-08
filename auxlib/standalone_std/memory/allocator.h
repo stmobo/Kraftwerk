@@ -1,5 +1,6 @@
 // Allocator.h
-#include "utility.h"
+#pragma once
+#include "standalone_std/utility.h"
 
 namespace standalone_std {
 
