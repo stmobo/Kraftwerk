@@ -25,9 +25,12 @@
 # Build artifacts
 *.sym
 *.iso
+isodir
 isodir/*
 
 # Debugging and testing
+.vagrant
+.vagrant/*
 io_port.txt
 symbols
 *.bxrc
