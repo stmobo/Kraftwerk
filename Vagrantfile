@@ -43,7 +43,7 @@ Vagrant.configure(2) do |config|
     make
     make install
     
-    export PATH="$PREFIX/bin:/opt/gcc-6.2.0/bin:$PATH
+    export PATH="$PREFIX/bin:/opt/gcc-6.2.0/bin:$PATH"
     
     # Now build the cross compiler toolchain:
     
